@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SIMPATI — Manajemen Aset Tetap &amp; Perpindahan Barang</title>
+<meta name="description" content="Sistem sederhana untuk melihat data aset tetap dan mencatat perpindahan barang RSH Madiun.">
+<meta name="theme-color" content="#0a2637">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9.5 12 4l9 5.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5Z"/>
+          <path d="M9 21v-6h6v6"/>
+          <path d="M12 8.5v3M10.5 10h3"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <strong>SIMPATI</strong>
+        <span>Aset Tetap · RSH Madiun</span>
+      </div>
+    </div>
+
+    <nav class="nav" aria-label="Navigasi utama">
+      <p class="nav-label">Menu</p>
+      <button class="nav-item is-active" data-view="ringkasan">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>
+        Ringkasan
+      </button>
+      <button class="nav-item" data-view="aset">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9"/></svg>
+        Data Aset
+        <span class="nav-count" id="nav-count-aset"></span>
+      </button>
+      <button class="nav-item" data-view="perpindahan">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 7h13l-3-3M20 17H7l3 3"/><path d="M17 7v4M7 17v-4"/></svg>
+        Perpindahan
+      </button>
+      <button class="nav-item" data-view="perbaikan">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14.5 6.5 17 4l3 3-2.5 2.5"/><path d="M16 9 9 16l-1.5 4-4 1.5L5 18l7-7"/><path d="M15 4v4M19 6v4"/></svg>
+        Perbaikan
+      </button>
+      <button class="nav-item" data-view="penyusutan">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5v14h16"/><path d="m7 15 4-4 3 3 4-6"/><path d="M15 8h3v3"/></svg>
+        Penyusutan
+      </button>
+      <button class="nav-item" data-view="riwayat">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+        Riwayat
+        <span class="nav-count" id="nav-count-riwayat"></span>
+      </button>
+
+      <p class="nav-label nav-label-sub">Kelola</p>
+      <button class="nav-item" data-view="tambah">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9"/><path d="M12 6v6M9 9h6"/></svg>
+        Tambah Barang
+      </button>
+      <button class="nav-item" data-view="admin">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3 5 6v5c0 4.5 3 8.4 7 10 4-1.6 7-5.5 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+        Admin
+      </button>
+    </nav>
+
+    <div class="sidebar-foot">
+      <div class="source-card">
+        <span class="source-label">Sumber data</span>
+        <strong id="source-name">LOKTAIL OKTOBER 2026</strong>
+        <span id="source-meta">3.200 unit · 242 lokasi</span>
+      </div>
+      <button class="sidebar-reset" id="btn-reset">Reset data perpindahan</button>
+    </div>
+  </aside>
+
+  <div class="overlay" id="overlay" hidden></div>
+
+  <!-- ============ MAIN ============ -->
+  <main class="main">
+    <header class="topbar">
+      <button class="icon-btn menu-btn" id="menu-btn" aria-label="Buka menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div class="topbar-title">
+        <span class="crumb">SIMPATI</span>
+        <h1 id="page-title">Ringkasan</h1>
+      </div>
+      <div class="topbar-right">
+        <div class="date-chip" id="today-chip"></div>
+        <div class="user-chip" title="Admin Aset">
+          <span class="avatar">AD</span>
+          <span class="user-meta"><strong>Admin Aset</strong><small>RSH Madiun</small></span>
+        </div>
+      </div>
+    </header>
+
+    <div class="content">
+
+      <!-- ================= RINGKASAN ================= -->
+      <section class="view is-active" id="view-ringkasan">
+        <div class="page-head">
+          <div>
+            <h2>Ringkasan Aset Tetap</h2>
+            <p>Pantau nilai aset, sebaran unit, dan aktivitas perpindahan barang.</p>
+          </div>
+          <button class="btn btn-primary" data-goto="perpindahan">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>
+            Catat Perpindahan
+          </button>
+        </div>
+
+        <div class="kpi-grid" id="kpi-grid"></div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h3>Nilai Aset per Sub Kelompok</h3>
+                <p>Berdasarkan harga perolehan</p>
+              </div>
+              <span class="badge badge-neutral" id="chart-total-badge"></span>
+            </div>
+            <div class="bar-chart" id="chart-sub"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h3>Sebaran Unit Aset</h3>
+                <p>Jumlah unit per sub kelompok</p>
+              </div>
+            </div>
+            <div class="donut-wrap">
+              <div class="donut" id="chart-donut">
+                <div class="donut-center">
+                  <strong id="donut-total">0</strong>
+                  <span>unit</span>
+                </div>
+              </div>
+              <div class="legend" id="donut-legend"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h3>Perpindahan Terbaru</h3>
+                <p>Aktivitas mutasi barang terakhir</p>
+              </div>
+              <button class="link-btn" data-goto="riwayat">Lihat semua</button>
+            </div>
+            <div id="recent-moves" class="move-list"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h3>Lokasi dengan Aset Terbanyak</h3>
+                <p>5 ruang penyimpanan teratas</p>
+              </div>
+              <button class="link-btn" data-goto="aset">Telusuri</button>
+            </div>
+            <div id="top-locs" class="rank-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= DATA ASET ================= -->
+      <section class="view" id="view-aset">
+        <div class="page-head">
+          <div>
+            <h2>Data Aset</h2>
+            <p>Daftar aset tetap beserta lokasi terkini setelah perpindahan.</p>
+          </div>
+          <div class="head-actions">
+            <button class="btn btn-ghost" id="btn-export-aset">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 4v11m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/></svg>
+              Ekspor CSV
+            </button>
+            <button class="btn btn-primary" data-goto="tambah">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>
+              Tambah Barang
+            </button>
+          </div>
+        </div>
+
+        <div class="card table-card">
+          <div class="toolbar">
+            <div class="search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              <input type="search" id="aset-search" placeholder="Cari nama barang, kode, merek, atau lokasi…" autocomplete="off">
+            </div>
+            <select id="aset-sub" class="select" aria-label="Filter sub kelompok"></select>
+            <select id="aset-lokasi" class="select" aria-label="Filter lokasi"></select>
+            <select id="aset-sort" class="select" aria-label="Urutkan">
+              <option value="nama">Nama A–Z</option>
+              <option value="nilai-desc">Nilai tertinggi</option>
+              <option value="nilai-asc">Nilai terendah</option>
+              <option value="baru">Perolehan terbaru</option>
+              <option value="lama">Perolehan terlama</option>
+            </select>
+          </div>
+
+          <div class="result-bar">
+            <p id="aset-result-text">Menampilkan 0 aset</p>
+            <div class="chips" id="aset-active-filters"></div>
+          </div>
+
+          <div class="table-scroll">
+            <table class="table" id="aset-table">
+              <thead>
+                <tr>
+                  <th class="w-kode">Kode</th>
+                  <th>Nama Barang</th>
+                  <th>Sub Kelompok</th>
+                  <th>Lokasi</th>
+                  <th class="w-tgl">Perolehan</th>
+                  <th class="num w-nilai">Nilai</th>
+                  <th class="w-aksi"></th>
+                </tr>
+              </thead>
+              <tbody id="aset-tbody"></tbody>
+            </table>
+          </div>
+
+          <div class="table-foot">
+            <div class="page-size">
+              <span>Tampilkan</span>
+              <select id="aset-pagesize" class="select select-sm">
+                <option value="12">12</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+              </select>
+              <span>per halaman</span>
+            </div>
+            <div class="pagination" id="aset-pagination"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= PERPINDAHAN ================= -->
+      <section class="view" id="view-perpindahan">
+        <div class="page-head">
+          <div>
+            <h2>Catat Perpindahan Barang</h2>
+            <p>Pindahkan aset antar ruang atau unit, lalu simpan sebagai riwayat mutasi.</p>
+          </div>
+        </div>
+
+        <div class="move-layout">
+          <form class="card form-card" id="move-form" novalidate>
+            <div class="card-head">
+              <div>
+                <h3>Formulir Perpindahan</h3>
+                <p>Isi data pemindahan aset dengan lengkap</p>
+              </div>
+              <span class="step-badge">01 / 01</span>
+            </div>
+
+            <div class="field">
+              <label for="asset-picker">1. Pilih aset <span class="req">*</span></label>
+              <div class="picker" id="picker">
+                <svg class="picker-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                <input type="text" id="asset-picker" placeholder="Ketik nama atau kode aset…" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="picker-results" aria-autocomplete="list">
+                <button type="button" class="picker-clear" id="picker-clear" hidden aria-label="Hapus pilihan">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m6 6 12 12M18 6 6 18"/></svg>
+                </button>
+                <div class="picker-results" id="picker-results" role="listbox" hidden></div>
+              </div>
+              <p class="field-hint">Cari berdasarkan nama barang, kode aset, atau lokasi saat ini.</p>
+            </div>
+
+            <div class="selected-asset" id="selected-asset" hidden></div>
+
+            <div class="form-grid">
+              <div class="field">
+                <label for="move-from">2. Lokasi asal</label>
+                <input type="text" id="move-from" class="input readonly" readonly placeholder="Terisi otomatis dari aset">
+              </div>
+              <div class="field">
+                <label for="move-to">3. Lokasi tujuan <span class="req">*</span></label>
+                <select id="move-to" class="select select-full" required>
+                  <option value="">Pilih lokasi tujuan…</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="move-date">4. Tanggal perpindahan <span class="req">*</span></label>
+                <input type="date" id="move-date" class="input" required>
+              </div>
+              <div class="field">
+                <label for="move-pic">5. Petugas / PIC <span class="req">*</span></label>
+                <input type="text" id="move-pic" class="input" placeholder="Nama penanggung jawab" required>
+              </div>
+              <div class="field field-full">
+                <label for="move-reason">6. Alasan perpindahan <span class="req">*</span></label>
+                <select id="move-reason" class="select select-full" required>
+                  <option value="">Pilih alasan…</option>
+                  <option>Relokasi ruang</option>
+                  <option>Kebutuhan pelayanan</option>
+                  <option>Perbaikan / servis</option>
+                  <option>Peminjaman unit lain</option>
+                  <option>Penggantian unit</option>
+                  <option>Lainnya</option>
+                </select>
+              </div>
+              <div class="field field-full">
+                <label for="move-note">7. Catatan tambahan</label>
+                <textarea id="move-note" class="input" rows="3" placeholder="Nomor berita acara, kondisi barang, atau keterangan lain (opsional)"></textarea>
+              </div>
+            </div>
+
+            <div class="form-error" id="move-error" role="alert" hidden></div>
+
+            <div class="form-actions">
+              <button type="button" class="btn btn-ghost" id="move-reset">Bersihkan</button>
+              <button type="submit" class="btn btn-primary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12.5 10 17l9-10"/></svg>
+                Simpan Perpindahan
+              </button>
+            </div>
+          </form>
+
+          <aside class="move-side">
+            <div class="card preview-card" id="move-preview">
+              <div class="card-head">
+                <div><h3>Pratinjau</h3><p>Ringkasan perpindahan</p></div>
+              </div>
+              <div class="preview-empty" id="preview-empty">
+                <div class="preview-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 7h13l-3-3M20 17H7l3 3"/><path d="M17 7v4M7 17v-4"/></svg>
+                </div>
+                <p>Pilih aset terlebih dahulu untuk melihat pratinjau perpindahan.</p>
+              </div>
+              <div id="preview-body" hidden></div>
+            </div>
+
+            <div class="card tips-card">
+              <h3>Panduan singkat</h3>
+              <ol class="tips">
+                <li>Cari dan pilih aset yang akan dipindahkan.</li>
+                <li>Lokasi asal terisi otomatis dari data aset.</li>
+                <li>Tentukan ruang tujuan, tanggal, dan petugas.</li>
+                <li>Simpan — lokasi aset langsung diperbarui dan tercatat di riwayat.</li>
+              </ol>
+              <p class="tips-note">Data perpindahan tersimpan di perangkat ini (localStorage).</p>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- ================= RIWAYAT ================= -->
+      <section class="view" id="view-riwayat">
+        <div class="page-head">
+          <div>
+            <h2>Riwayat Perpindahan</h2>
+            <p>Seluruh mutasi barang yang tercatat, terbaru di atas.</p>
+          </div>
+          <button class="btn btn-ghost" id="btn-export-riwayat">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 4v11m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/></svg>
+            Ekspor CSV
+          </button>
+        </div>
+
+        <div class="mini-stats" id="riwayat-stats"></div>
+
+        <div class="card table-card">
+          <div class="toolbar">
+            <div class="search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              <input type="search" id="riwayat-search" placeholder="Cari aset, lokasi, atau petugas…" autocomplete="off">
+            </div>
+            <select id="riwayat-reason" class="select" aria-label="Filter alasan">
+              <option value="">Semua alasan</option>
+              <option>Relokasi ruang</option>
+              <option>Kebutuhan pelayanan</option>
+              <option>Perbaikan / servis</option>
+              <option>Peminjaman unit lain</option>
+              <option>Penggantian unit</option>
+              <option>Lainnya</option>
+            </select>
+          </div>
+
+          <div class="result-bar">
+            <p id="riwayat-result-text">0 perpindahan</p>
+          </div>
+
+          <div class="table-scroll">
+            <table class="table" id="riwayat-table">
+              <thead>
+                <tr>
+                  <th class="w-tgl">Tanggal</th>
+                  <th>Aset</th>
+                  <th>Dari</th>
+                  <th>Ke</th>
+                  <th>Petugas</th>
+                  <th>Alasan</th>
+                  <th class="w-aksi"></th>
+                </tr>
+              </thead>
+              <tbody id="riwayat-tbody"></tbody>
+            </table>
+          </div>
+          <div class="empty-state" id="riwayat-empty" hidden>
+            <div class="empty-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+            </div>
+            <h3>Belum ada perpindahan</h3>
+            <p>Catat perpindahan pertama Anda untuk mulai membangun riwayat mutasi aset.</p>
+            <button class="btn btn-primary" data-goto="perpindahan">Catat Perpindahan</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= TAMBAH BARANG ================= -->
+      <section class="view" id="view-tambah">
+        <div class="page-head">
+          <div>
+            <h2>Tambah Barang</h2>
+            <p>Daftarkan aset baru ke dalam data aset tetap. Data tersimpan di perangkat ini.</p>
+          </div>
+          <span class="badge badge-teal">Aset baru</span>
+        </div>
+
+        <div class="move-layout">
+          <form class="card form-card" id="add-form" novalidate>
+            <div class="card-head">
+              <div>
+                <h3>Formulir Barang Baru</h3>
+                <p>Isi identitas aset, lokasi, dan nilai perolehan</p>
+              </div>
+              <span class="step-badge">DATA ASET</span>
+            </div>
+
+            <div class="form-grid">
+              <div class="field">
+                <label for="add-ref">1. Kode aset <span class="req">*</span></label>
+                <input type="text" id="add-ref" class="input" placeholder="Contoh: 1764419" autocomplete="off">
+                <p class="field-hint">Harus unik, tidak boleh sama dengan kode yang sudah ada.</p>
+              </div>
+              <div class="field">
+                <label for="add-name">2. Nama barang <span class="req">*</span></label>
+                <input type="text" id="add-name" class="input" placeholder="Contoh: KURSI TUNGGU" autocomplete="off">
+              </div>
+              <div class="field">
+                <label for="add-sub">3. Sub kelompok <span class="req">*</span></label>
+                <select id="add-sub" class="select select-full"></select>
+              </div>
+              <div class="field">
+                <label for="add-loc">4. Lokasi / ruang <span class="req">*</span></label>
+                <select id="add-loc" class="select select-full"></select>
+              </div>
+              <div class="field">
+                <label for="add-date">5. Tanggal perolehan <span class="req">*</span></label>
+                <input type="date" id="add-date" class="input">
+              </div>
+              <div class="field">
+                <label for="add-price">6. Harga perolehan <span class="req">*</span></label>
+                <input type="text" id="add-price" class="input" inputmode="numeric" placeholder="Contoh: 1.250.000" autocomplete="off">
+              </div>
+              <div class="field">
+                <label for="add-brand">7. Merek / detail</label>
+                <input type="text" id="add-brand" class="input" placeholder="Contoh: HIKVISION (opsional)" autocomplete="off">
+              </div>
+              <div class="field">
+                <label for="add-kel">8. Kelompok</label>
+                <input type="text" id="add-kel" class="input" value="AKTIVA TETAP BERWUJUD" autocomplete="off">
+              </div>
+              <div class="field field-full">
+                <label for="add-desc">9. Deskripsi</label>
+                <textarea id="add-desc" class="input" rows="3" placeholder="Spesifikasi atau keterangan tambahan (opsional)"></textarea>
+              </div>
+            </div>
+
+            <div class="form-error" id="add-error" role="alert" hidden></div>
+
+            <div class="form-actions">
+              <button type="button" class="btn btn-ghost" id="add-reset">Bersihkan</button>
+              <button type="submit" class="btn btn-primary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12.5 10 17l9-10"/></svg>
+                Simpan Barang
+              </button>
+            </div>
+          </form>
+
+          <aside class="move-side">
+            <div class="card preview-card" id="add-preview-card">
+              <div class="card-head">
+                <div><h3>Pratinjau</h3><p>Ringkasan barang baru</p></div>
+              </div>
+              <div class="preview-empty" id="add-preview-empty">
+                <div class="preview-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9"/></svg>
+                </div>
+                <p>Mulai isi formulir untuk melihat pratinjau barang.</p>
+              </div>
+              <div id="add-preview-body" class="preview-body" hidden></div>
+            </div>
+
+            <div class="card tips-card">
+              <h3>Panduan singkat</h3>
+              <ol class="tips">
+                <li>Kode aset harus unik dan belum terdaftar.</li>
+                <li>Pilih sub kelompok dan lokasi dari daftar yang tersedia.</li>
+                <li>Harga perolehan menentukan nilai aset pada ringkasan.</li>
+                <li>Setelah tersimpan, barang langsung bisa dipindahkan dan dihitung biaya perbaikannya.</li>
+              </ol>
+              <p class="tips-note">Data barang baru tersimpan di perangkat ini dan dapat dicadangkan lewat panel admin.</p>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- ================= PERBAIKAN ================= -->
+      <section class="view" id="view-perbaikan">
+        <div class="page-head">
+          <div>
+            <h2>Perhitungan Biaya Perbaikan</h2>
+            <p>Hitung estimasi 15% dari harga perolehan dan periksa syarat biaya perbaikan.</p>
+          </div>
+          <span class="badge badge-amber">Ambang batas Rp 4.000.000</span>
+        </div>
+
+        <div class="repair-layout">
+          <form class="card form-card" id="repair-form" novalidate>
+            <div class="card-head">
+              <div>
+                <h3>Kalkulator Perbaikan</h3>
+                <p>Pilih aset lalu masukkan biaya perbaikan</p>
+              </div>
+              <span class="step-badge">15% × HARGA</span>
+            </div>
+
+            <div class="field">
+              <label for="repair-picker">1. Pilih aset <span class="req">*</span></label>
+              <div class="picker" id="repair-picker-wrap">
+                <svg class="picker-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                <input type="text" id="repair-picker" placeholder="Ketik nama atau kode aset…" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="repair-picker-results" aria-autocomplete="list">
+                <button type="button" class="picker-clear" id="repair-picker-clear" hidden aria-label="Hapus pilihan">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m6 6 12 12M18 6 6 18"/></svg>
+                </button>
+                <div class="picker-results" id="repair-picker-results" role="listbox" hidden></div>
+              </div>
+              <p class="field-hint">Cari berdasarkan nama barang, kode aset, atau lokasi saat ini.</p>
+            </div>
+
+            <div class="selected-asset" id="repair-selected" hidden></div>
+
+            <div class="form-grid">
+              <div class="field">
+                <label for="repair-price">2. Harga perolehan</label>
+                <input type="text" id="repair-price" class="input readonly" readonly placeholder="Terisi otomatis dari aset">
+              </div>
+              <div class="field">
+                <label for="repair-estimate">3. Estimasi 15%</label>
+                <input type="text" id="repair-estimate" class="input readonly" readonly placeholder="Harga perolehan × 15%">
+              </div>
+              <div class="field field-full">
+                <label for="repair-cost">4. Biaya perbaikan <span class="req">*</span></label>
+                <input type="text" id="repair-cost" class="input" inputmode="numeric" placeholder="Contoh: 5.000.000" autocomplete="off">
+                <p class="field-hint">Masukkan nilai biaya perbaikan yang diajukan / diperkirakan.</p>
+              </div>
+            </div>
+
+            <div class="form-error" id="repair-error" role="alert" hidden></div>
+
+            <div class="form-actions">
+              <button type="button" class="btn btn-ghost" id="repair-reset">Bersihkan</button>
+              <button type="submit" class="btn btn-primary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12.5 10 17l9-10"/></svg>
+                Simpan Hasil
+              </button>
+            </div>
+          </form>
+
+          <aside class="move-side">
+            <div class="card repair-result-card" id="repair-result">
+              <div class="card-head">
+                <div><h3>Hasil Pemeriksaan</h3><p>Status kelayakan perbaikan</p></div>
+              </div>
+              <div id="repair-result-body">
+                <div class="preview-empty">
+                  <div class="preview-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 11a3 3 0 1 0 6 0 3 3 0 1 0-6 0"/><path d="M12 14v7"/><path d="M8 21h8"/></svg>
+                  </div>
+                  <p>Pilih aset dan isi biaya perbaikan untuk melihat hasil.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="card rules-card">
+              <h3>Aturan penilaian</h3>
+              <div class="rule-row">
+                <span class="rule-no">1</span>
+                <p>Biaya perbaikan harus <strong>lebih dari Rp 4.000.000</strong>.</p>
+              </div>
+              <div class="rule-row">
+                <span class="rule-no">2</span>
+                <p>Estimasi <strong>15% dari harga perolehan</strong> harus lebih dari Rp 4.000.000.</p>
+              </div>
+              <div class="rule-row">
+                <span class="rule-no">3</span>
+                <p>Jika <strong>kedua syarat terpenuhi</strong>, aset memenuhi syarat perbaikan.</p>
+              </div>
+              <p class="tips-note">Salah satu syarat tidak terpenuhi = tidak memenuhi syarat perbaikan.</p>
+            </div>
+          </aside>
+        </div>
+
+        <div class="card table-card repair-history-card">
+          <div class="card-head">
+            <div>
+              <h3>Riwayat Perhitungan</h3>
+              <p>Hasil perhitungan yang Anda simpan</p>
+            </div>
+            <button class="link-btn" id="btn-export-repairs">Ekspor CSV</button>
+          </div>
+          <div class="result-bar">
+            <p id="repair-result-text">0 perhitungan</p>
+          </div>
+          <div class="table-scroll" id="repair-table-wrap">
+            <table class="table" id="repair-table">
+              <thead>
+                <tr>
+                  <th class="w-tgl">Tanggal</th>
+                  <th>Aset</th>
+                  <th class="num w-nilai">Harga Perolehan</th>
+                  <th class="num w-nilai">Estimasi 15%</th>
+                  <th class="num w-nilai">Biaya Perbaikan</th>
+                  <th>Status</th>
+                  <th class="w-aksi"></th>
+                </tr>
+              </thead>
+              <tbody id="repair-tbody"></tbody>
+            </table>
+          </div>
+          <div class="empty-state" id="repair-empty" hidden>
+            <div class="empty-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M9 11a3 3 0 1 0 6 0 3 3 0 1 0-6 0"/><path d="M12 14v7"/><path d="M8 21h8"/></svg>
+            </div>
+            <h3>Belum ada hasil perhitungan</h3>
+            <p>Hitung biaya perbaikan aset lalu simpan hasilnya agar tercatat di sini.</p>
+            <button class="btn btn-primary" data-goto="perbaikan">Mulai Menghitung</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= PENYUSUTAN ================= -->
+      <section class="view" id="view-penyusutan">
+        <div class="page-head">
+          <div>
+            <h2>Penyusutan Garis Lurus</h2>
+            <p>Penyusutan tahunan = (harga perolehan − nilai residu 0) ÷ masa manfaat; penyusutan bulanan = tahunan ÷ 12.</p>
+          </div>
+          <div class="head-actions">
+            <button class="btn btn-ghost" id="btn-export-penyusutan">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 4v11m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/></svg>
+              Ekspor CSV
+            </button>
+          </div>
+        </div>
+
+        <div class="kpi-grid dep-kpis" id="penyusutan-kpis"></div>
+
+        <div class="card dep-cat-card">
+          <div class="card-head">
+            <div>
+              <h3>Masa Manfaat per Kategori</h3>
+              <p>Umur ekonomis yang dipakai untuk menghitung penyusutan</p>
+            </div>
+            <span class="dep-formula">Residu Rp 0</span>
+          </div>
+          <div class="dep-cats" id="dep-cats"></div>
+          <p class="dep-note">
+            Kategori mengikuti kelompok sheet <strong>ALKES / ALUM / MOBIL / MOTOR / KSO</strong> pada data sumber.
+            Aset dengan kode yang tidak dikenali akan tampil sebagai <em>Belum berkategori</em>.
+          </p>
+        </div>
+
+        <div class="card table-card">
+          <div class="toolbar">
+            <div class="search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              <input type="search" id="dep-search" placeholder="Cari nama barang, kode, kategori, atau lokasi…" autocomplete="off">
+            </div>
+            <select id="dep-kat" class="select" aria-label="Filter kategori aset"></select>
+            <select id="dep-status" class="select" aria-label="Filter status penyusutan">
+              <option value="">Semua status</option>
+              <option value="active">Masih disusutkan</option>
+              <option value="done">Masa manfaat selesai</option>
+            </select>
+            <select id="dep-sort" class="select" aria-label="Urutkan">
+              <option value="nama">Nama A–Z</option>
+              <option value="tahunan-desc">Penyusutan tahunan tertinggi</option>
+              <option value="nilai-desc">Harga tertinggi</option>
+              <option value="baru">Perolehan terbaru</option>
+              <option value="lama">Perolehan terlama</option>
+            </select>
+          </div>
+
+          <div class="result-bar">
+            <p id="dep-result-text">Menampilkan 0 aset</p>
+            <div class="chips" id="dep-active-filters"></div>
+          </div>
+
+          <div class="table-scroll">
+            <table class="table dep-table" id="dep-table">
+              <thead>
+                <tr>
+                  <th>Aset Barang</th>
+                  <th>Kategori</th>
+                  <th class="w-tgl">Perolehan</th>
+                  <th>Masa Manfaat</th>
+                  <th class="num">Harga Satuan</th>
+                  <th class="num">Penyusutan / Tahun</th>
+                  <th class="num">Penyusutan / Bulan</th>
+                  <th>Status</th>
+                  <th class="w-aksi"></th>
+                </tr>
+              </thead>
+              <tbody id="dep-tbody"></tbody>
+            </table>
+          </div>
+
+          <div class="table-foot">
+            <div class="page-size">
+              <span>Tampilkan</span>
+              <select id="dep-pagesize" class="select select-sm">
+                <option value="12">12</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+              </select>
+              <span>per halaman</span>
+            </div>
+            <div class="pagination" id="dep-pagination"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= ADMIN ================= -->
+      <section class="view" id="view-admin">
+        <div class="page-head">
+          <div>
+            <h2>Panel Admin</h2>
+            <p>Unggah Excel terbaru, kelola data aset, dan atur keamanan aplikasi.</p>
+          </div>
+          <div class="head-actions" id="admin-head-actions"></div>
+        </div>
+
+        <div class="admin-gate" id="admin-gate" hidden>
+          <div class="card gate-card">
+            <div class="gate-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3 5 6v5c0 4.5 3 8.4 7 10 4-1.6 7-5.5 7-10V6l-7-3Z"/><path d="M12 10v4M12 16.5v.5"/></svg>
+            </div>
+            <h3>Area terbatas</h3>
+            <p>Masukkan PIN admin untuk membuka pengelolaan data aset.</p>
+            <form id="admin-login-form" novalidate>
+              <div class="field">
+                <label for="admin-pin">PIN Admin</label>
+                <input type="password" id="admin-pin" class="input" inputmode="numeric" autocomplete="off" placeholder="Masukkan PIN" maxlength="12">
+                <p class="field-hint">PIN awal: <strong>1234</strong> — dapat diganti setelah masuk.</p>
+              </div>
+              <div class="form-error" id="admin-login-error" role="alert" hidden></div>
+              <button type="submit" class="btn btn-primary btn-block">Buka panel admin</button>
+            </form>
+          </div>
+        </div>
+
+        <div id="admin-panel" hidden>
+          <div class="admin-kpis" id="admin-kpis"></div>
+
+          <div class="admin-layout">
+            <div class="admin-main">
+              <div class="card upload-card">
+                <div class="card-head">
+                  <div>
+                    <h3>Unggah Data Baru (Excel)</h3>
+                    <p>Ganti atau gabungkan data aset dari file .xlsx / .csv</p>
+                  </div>
+                  <span class="step-badge" id="upload-step-badge">01 / 03</span>
+                </div>
+
+                <div class="upload-steps">
+                  <span class="ustep is-active" data-ustep="1">1. Pilih file</span>
+                  <span class="ustep" data-ustep="2">2. Petakan kolom</span>
+                  <span class="ustep" data-ustep="3">3. Pratinjau &amp; impor</span>
+                </div>
+
+                <div class="upload-body">
+                  <div id="upload-step-file">
+                    <label class="dropzone" id="dropzone" for="upload-file">
+                      <span class="dz-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V4m0 0L7 9m5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+                      </span>
+                      <strong>Tarik file Excel ke sini</strong>
+                      <span>atau klik untuk memilih file · .xlsx / .csv · maks 20 MB</span>
+                      <input type="file" id="upload-file" accept=".xlsx,.csv" hidden>
+                    </label>
+                    <div class="upload-note">
+                      <span>Belum punya file? Gunakan format kolom yang sama dengan data saat ini.</span>
+                      <button type="button" class="link-btn" id="btn-template">Unduh template CSV</button>
+                    </div>
+                    <div class="file-chip" id="upload-file-chip" hidden></div>
+                    <div class="form-error" id="upload-error" role="alert" hidden></div>
+                  </div>
+
+                  <div id="upload-step-map" hidden>
+                    <div class="map-head">
+                      <div class="map-head-row">
+                        <label for="upload-sheet" class="mini-label">Sheet</label>
+                        <select id="upload-sheet" class="select"></select>
+                        <label for="upload-header" class="mini-label">Baris header</label>
+                        <input type="number" id="upload-header" class="input input-sm" min="1" value="1">
+                        <button type="button" class="btn btn-ghost btn-sm" id="btn-apply-header">Terapkan</button>
+                      </div>
+                      <p class="file-info" id="upload-file-info"></p>
+                    </div>
+                    <p class="map-title">Cocokkan kolom file dengan kolom aplikasi</p>
+                    <div class="map-grid" id="upload-map"></div>
+                    <p class="map-title">Pratinjau 5 baris pertama</p>
+                    <div class="preview-scroll" id="upload-preview"></div>
+                    <div class="form-actions">
+                      <button type="button" class="btn btn-ghost" data-upload-remove>Ganti file</button>
+                      <button type="button" class="btn btn-primary" id="btn-to-review">
+                        Lanjut ke pratinjau
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h14m0 0-5-5m5 5-5 5"/></svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div id="upload-step-review" hidden>
+                    <div class="import-stats" id="upload-stats"></div>
+                    <div id="upload-issues"></div>
+                    <p class="map-title">Cara memasukkan data</p>
+                    <div class="import-mode" id="upload-mode" role="radiogroup" aria-label="Mode impor">
+                      <label class="mode-option">
+                        <input type="radio" name="import-mode" value="replace" checked>
+                        <span><strong>Ganti seluruh data</strong><small>Dataset lama diganti dengan isi file. Perpindahan yang asetnya tidak ada akan dihapus.</small></span>
+                      </label>
+                      <label class="mode-option">
+                        <input type="radio" name="import-mode" value="merge">
+                        <span><strong>Gabungkan (perbarui per kode)</strong><small>Aset dengan kode yang sama diperbarui, aset lain dipertahankan.</small></span>
+                      </label>
+                    </div>
+                    <div class="form-actions">
+                      <button type="button" class="btn btn-ghost" id="btn-cancel-upload">Batal</button>
+                      <button type="button" class="btn btn-primary" id="btn-do-import">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4m0 0L7 9m5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+                        Impor data
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="upload-success" id="upload-success" hidden></div>
+                </div>
+              </div>
+
+              <div class="card log-card">
+                <div class="card-head">
+                  <div><h3>Log Aktivitas Admin</h3><p>Tindakan terakhir pada perangkat ini</p></div>
+                  <button class="link-btn" id="btn-clear-log">Bersihkan</button>
+                </div>
+                <div class="log-list" id="admin-log"></div>
+              </div>
+            </div>
+
+            <aside class="admin-side">
+              <div class="card" id="admin-dataset"></div>
+
+              <div class="card side-card">
+                <div class="card-head"><div><h3>Cadangan Data</h3><p>Ekspor / pulihkan dataset aktif</p></div></div>
+                <div class="side-card-body">
+                  <button class="btn btn-ghost btn-block" id="btn-backup">Ekspor cadangan JSON</button>
+                  <label class="btn btn-ghost btn-block" for="restore-file">
+                    Pulihkan dari cadangan
+                    <input type="file" id="restore-file" accept=".json" hidden>
+                  </label>
+                  <p class="side-note">Cadangan berisi seluruh data aset yang sedang aktif.</p>
+                </div>
+              </div>
+
+              <div class="card side-card">
+                <div class="card-head"><div><h3>Keamanan</h3><p>PIN akses panel admin</p></div></div>
+                <form class="side-card-body" id="admin-pin-form" novalidate>
+                  <div class="field-inline">
+                    <input type="password" id="new-pin" class="input" placeholder="PIN baru (min. 4 digit)" maxlength="12" autocomplete="off">
+                    <button type="submit" class="btn btn-ghost btn-sm">Simpan</button>
+                  </div>
+                  <div class="form-error" id="pin-error" role="alert" hidden></div>
+                </form>
+              </div>
+
+              <div class="card side-card danger-card">
+                <div class="card-head"><div><h3>Zona Berbahaya</h3><p>Tindakan tidak dapat dibatalkan</p></div></div>
+                <div class="side-card-body">
+                  <button class="btn btn-danger btn-block" id="btn-reset-dataset">Kembalikan data bawaan</button>
+                  <button class="btn btn-ghost btn-block" id="btn-reset-moves-admin">Hapus semua perpindahan</button>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<div id="modal-root"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="data.js"></script>
+<script src="kategori.js"></script>
+<script src="xlsx-reader.js"></script>
+<script src="dataset-store.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
